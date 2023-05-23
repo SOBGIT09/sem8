@@ -1,0 +1,44 @@
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+
+# Load the data
+(x_train, y_train), (x_test, y_test) = keras.datasets.fashion_mnist.load_data()
+
+# Display some images
+plt.figure(figsize=(10,10))
+for i in range(25):
+    plt.subplot(5, 5, i+1)
+    plt.imshow(x_train[i], cmap='gray')
+    plt.axis('off')
+plt.show()
+
+# Normalize the data
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Convert the labels to one-hot encoded vectors
+num_classes = 10
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+# Build the model
+model = keras.Sequential([
+    layers.Reshape(target_shape=(28, 28, 1), input_shape=(28, 28)),
+    layers.Conv2D(filters=16, kernel_size=(3, 3), activation='relu'),
+    layers.MaxPooling2D(pool_size=(2, 2)),
+    layers.Flatten(),
+    layers.Dense(units=64, activation='relu'),
+    layers.Dense(units=num_classes, activation='softmax')
+])
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=10, batch_size=32, validation_split=0.1)
+
+# Evaluate the model
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print('Test accuracy:', test_acc)
