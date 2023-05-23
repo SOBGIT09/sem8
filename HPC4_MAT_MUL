@@ -1,0 +1,84 @@
+#include <iostream>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+
+using namespace std;
+
+
+const int N = 16;
+
+
+_global_ void matrixMultiplicationKernel(int* m1, int* m2, int* m3)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < N && col < N)
+    {
+        int sum = 0;
+        for (int i = 0; i < N; i++)
+            sum += m1[row * N + i] * m2[i * N + col];
+        
+        m3[row * N + col] = sum;
+    }
+}
+
+
+void print(int v[])
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+            cout << v[i*N + j] << " ";
+        cout << "\n";
+    }
+    cout << "\n";
+}
+
+
+int main()
+{
+    int m1[N*N], m2[N*N], m3[N*N];
+    int *dev_m1, *dev_m2, *dev_m3;
+
+    int size = N * N * sizeof(int);
+
+    cudaMalloc((void**)&dev_m1, size);
+    cudaMalloc((void**)&dev_m2, size);
+    cudaMalloc((void**)&dev_m3, size);
+
+    for (int i = 0; i < N*N; i++)
+    {
+        m1[i] = rand() % 100;
+        m2[i] = rand() % 100;
+    }
+
+    cout << "Matrix-1 (M1) : \n";
+    print(m1);
+
+    cout << "Matrix-2 (M2) : \n";
+    print(m2);
+
+
+    cudaMemcpy(dev_m1, m1, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_m2, m2, size, cudaMemcpyHostToDevice);
+
+    dim3 block_size(N, N, 1);
+    dim3 grid_size(1, 1, 1);
+
+    matrixMultiplicationKernel << <grid_size, block_size >> > (dev_m1, dev_m2, dev_m3);
+
+    cudaMemcpy(m3, dev_m3, size, cudaMemcpyDeviceToHost);
+
+
+    cout << "Resultant Matrix (M3 = M1 x M2) : \n";
+    print(m3);
+
+
+    cudaFree(dev_m1);
+    cudaFree(dev_m2);
+    cudaFree(dev_m3);
+
+    return 0;
+}
