@@ -1,0 +1,71 @@
+#include <iostream>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+
+using namespace std;
+
+
+const int N = 512;
+
+
+_global_ void vectorAdditionKernel(int* v1, int* v2, int* v3)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if(idx < N)
+        v3[idx] = v1[idx] + v2[idx];
+}
+
+
+void print(int v[])
+{
+    for (int i = 0; i < N; i++)
+        cout << v[i] << " ";
+    cout << "\n\n";
+}
+
+
+int main()
+{
+    int v1[N], v2[N], v3[N];
+    int *dev_v1, *dev_v2, *dev_v3;
+
+    int size = N * sizeof(int);
+
+    cudaMalloc((void**)&dev_v1, size);
+    cudaMalloc((void**)&dev_v2, size);
+    cudaMalloc((void**)&dev_v3, size);
+
+    for (int i = 0; i < N; i++)
+    {
+        v1[i] = rand() % 1000;
+        v2[i] = rand() % 1000;
+    }
+
+    cout << "Vector-1 (V1) : \n";
+    print(v1);
+
+    cout << "Vector-2 (V2) : \n";
+    print(v2);
+
+
+    cudaMemcpy(dev_v1, v1, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_v2, v2, size, cudaMemcpyHostToDevice);
+
+    dim3 block_size(N, 1, 1);
+    dim3 grid_size(2, 1);
+
+    vectorAdditionKernel << <grid_size, block_size >> > (dev_v1, dev_v2, dev_v3);
+
+    cudaMemcpy(v3, dev_v3, size, cudaMemcpyDeviceToHost);
+
+
+    cout << "Resultant Vector (V3 = V1 + V2) : \n";
+    print(v3);
+
+    cudaFree(dev_v1);
+    cudaFree(dev_v2);
+    cudaFree(dev_v3);
+
+    return 0;
+}
